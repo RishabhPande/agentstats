@@ -44,7 +44,7 @@ b.set_xlabel("% of single runs where it ranks #1")
 b.set_title("If you had published one run", fontsize=8, loc="left")
 for ax in (a, b):
     ax.grid(axis="x", alpha=.25)
-fig.suptitle(f"{runs.shape[1]} identical runs of {len(sc)} configurations: {leaders.nunique()} different agents took first place",
+fig.suptitle(f"{runs.shape[1]} repeated runs of the same {len(sc)} configurations: {leaders.nunique()} different ones took first place",
              fontsize=11, x=.01, ha="left")
 fig.text(.01, .005, "Real data: ASSERT-KTH/agentic-evals-artifacts (CC-BY-4.0). Tiers from agentstats.tiers (Holm-corrected).",
          fontsize=7, color="#666")
