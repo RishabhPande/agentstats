@@ -16,10 +16,10 @@ pip install "agentstats[swebench] @ git+https://github.com/RishabhPande/agentsta
 
 ## What it shows
 
-![Ten identical runs of 12 agent configurations on SWE-bench Verified: the top spot changes between runs](docs/leaderboard_uncertainty.png)
+![Ten repeated runs of the same 12 agent configurations on SWE-bench Verified: the top spot changes between runs](docs/leaderboard_uncertainty.png)
 
 Real data: 12 configurations x 10 runs on SWE-bench Verified, from
-[ASSERT-KTH](https://huggingface.co/datasets/ASSERT-KTH/agentic-evals-artifacts) (CC-BY-4.0). The two leaders sit in
+[ASSERT-KTH](https://huggingface.co/datasets/ASSERT-KTH/agentic-evals-artifacts) (CC-BY-4.0). "Repeated" means the same configurations, tasks and settings, run again; outcomes differ run to run. The two leaders sit in
 the same statistical tier, and which one tops a published leaderboard depends on which run you happened to pick.
 Regenerate with `python examples/leaderboard_uncertainty.py` (needs `matplotlib`, about 25 s).
 
