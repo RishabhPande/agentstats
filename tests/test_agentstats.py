@@ -172,3 +172,15 @@ def test_swebench_loader_and_rerun(tmp_path):
     out = subprocess.run([sys.executable, "-m", "agentstats.cli", "swebench-audit", str(tmp_path), "--top", "2"],
                          capture_output=True, text=True, check=True).stdout
     assert "Re-run (plug-in)" in out
+
+
+def test_example_figure_runs(tmp_path):
+    """The README figure script runs end to end on the shipped real-data CSV."""
+    import subprocess, sys, pathlib
+    pytest = __import__("pytest")
+    pytest.importorskip("matplotlib")
+    script = pathlib.Path(__file__).resolve().parents[1] / "examples" / "leaderboard_uncertainty.py"
+    out = tmp_path / "fig.png"
+    r = subprocess.run([sys.executable, str(script), str(out)], capture_output=True, text=True, timeout=300)
+    assert r.returncode == 0, r.stderr
+    assert out.stat().st_size > 10_000

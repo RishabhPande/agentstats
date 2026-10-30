@@ -1,6 +1,6 @@
 # Reproducing the paper "Within the Noise"
 
-Install first: `pip install "agentstats[swebench]" matplotlib`
+Install first, from the repo root: `pip install -e ".[swebench]" matplotlib`
 
 ## Section 5: SWE-bench Verified leaderboard audit
 
