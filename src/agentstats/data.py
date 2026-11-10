@@ -39,6 +39,9 @@ def load(path_or_df, *, agent="agent", task="task", run="run", success="success"
     missing = [c for c in REQUIRED if c not in df.columns]
     if missing:
         raise ValueError(f"run table is missing required columns: {missing}")
+    nulls = [c for c in REQUIRED if df[c].isna().any()]
+    if nulls:
+        raise ValueError(f"run table has missing values in required columns: {nulls}")
     df["agent"] = df["agent"].astype(str)
     df["task"] = df["task"].astype(str)
     df["success"] = pd.to_numeric(df["success"], errors="raise").astype(float)
