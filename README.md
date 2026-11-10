@@ -33,6 +33,8 @@ One row per (agent, task, run). Extra columns are treated as nuisance factors.
 | openhands | django-11099 | 1 | 0 | 2026-08-01 | v1.3 | p95 |
 
 `success` can be 0/1 or a score in [0, 1]. Each `run` should be one complete pass over the benchmark.
+Missing values in `agent`, `task`, `run` or `success` are rejected instead of silently
+changing which outcomes enter the analysis. Optional factor columns may contain missing values.
 
 ## Python
 
