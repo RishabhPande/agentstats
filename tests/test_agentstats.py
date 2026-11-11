@@ -26,6 +26,35 @@ def test_load_validates():
         ast.load(pd.DataFrame({"agent": ["a", "a"], "task": ["t", "t"], "run": [0, 0], "success": [1, 0]}))
 
 
+@pytest.mark.parametrize("column", ["agent", "task", "run", "success"])
+@pytest.mark.parametrize("missing", [None, np.nan, pd.NA])
+def test_load_rejects_missing_required_values(column, missing):
+    df = pd.DataFrame({"agent": ["a"], "task": ["t"], "run": [0], "success": [1]})
+    df[column] = pd.Series([missing], dtype=object)
+    with pytest.raises(ValueError, match=f"missing values.*{column}"):
+        ast.load(df)
+
+
+def test_load_rejects_missing_csv_score(tmp_path):
+    path = tmp_path / "runs.csv"
+    path.write_text("agent,task,run,success\na,t,0,\n")
+    with pytest.raises(ValueError, match="missing values.*success"):
+        ast.load(path)
+
+
+def test_load_custom_columns_and_optional_missing_factors():
+    df = pd.DataFrame({"model": ["a", "a"], "case": ["t", "t"],
+                       "trial": [0, 1], "score": [0.0, 0.5],
+                       "api_date": [None, "2026-11-10"]})
+    loaded = ast.load(df, agent="model", task="case", run="trial", success="score")
+    assert loaded.success.tolist() == [0.0, 0.5]
+    assert loaded.api_date.isna().tolist() == [True, False]
+    assert "model" in df.columns  # validation must not mutate caller data
+    df.loc[0, "model"] = None
+    with pytest.raises(ValueError, match="missing values.*agent"):
+        ast.load(df, agent="model", task="case", run="trial", success="score")
+
+
 def test_holm():
     adj = ast.holm([0.01, 0.04, 0.03])
     assert np.allclose(adj, [0.03, 0.06, 0.06])
