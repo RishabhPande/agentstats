@@ -25,6 +25,9 @@ REQUIRED = ("agent", "task", "run", "success")
 
 def load(path_or_df, *, agent="agent", task="task", run="run", success="success") -> pd.DataFrame:
     """Load and validate a run table from a CSV/Parquet/JSONL path or a DataFrame."""
+    source_columns = (agent, task, run, success)
+    if len(set(source_columns)) != len(source_columns):
+        raise ValueError("required column mappings must use distinct source columns")
     if isinstance(path_or_df, pd.DataFrame):
         df = path_or_df.copy()
     else:
@@ -36,6 +39,9 @@ def load(path_or_df, *, agent="agent", task="task", run="run", success="success"
         else:
             df = pd.read_csv(p)
     df = df.rename(columns={agent: "agent", task: "task", run: "run", success: "success"})
+    duplicates = df.columns[df.columns.duplicated()].unique().tolist()
+    if duplicates:
+        raise ValueError(f"run table has duplicate column names after mapping: {duplicates}")
     missing = [c for c in REQUIRED if c not in df.columns]
     if missing:
         raise ValueError(f"run table is missing required columns: {missing}")
