@@ -213,3 +213,36 @@ def test_example_figure_runs(tmp_path):
     r = subprocess.run([sys.executable, str(script), str(out)], capture_output=True, text=True, timeout=300)
     assert r.returncode == 0, r.stderr
     assert out.stat().st_size > 10_000
+
+
+@pytest.mark.parametrize("column", ["agent", "task", "run", "success", "api_date"])
+def test_load_rejects_duplicate_column_labels(column):
+    df = pd.DataFrame([["a", "t", 0, 1]], columns=["agent", "task", "run", "success"])
+    if column == "api_date":
+        extra = pd.DataFrame([["d0", "d1"]], columns=[column, column])
+    else:
+        extra = pd.DataFrame({column: ["extra"]})
+    df = pd.concat([df, extra], axis=1)
+    with pytest.raises(ValueError, match=f"duplicate column names.*{column}"):
+        ast.load(df)
+
+
+def test_load_rejects_alias_collision_without_mutating_input():
+    df = pd.DataFrame({"agent": ["original"], "model": ["alias"], "task": ["t"], "run": [0], "success": [1]})
+    original = df.copy(deep=True)
+    with pytest.raises(ValueError, match="duplicate column names.*agent"):
+        ast.load(df, agent="model")
+    pd.testing.assert_frame_equal(df, original)
+
+
+def test_load_requires_distinct_source_mappings():
+    df = pd.DataFrame({"agent": ["a"], "task": ["t"], "run": [0], "success": [1]})
+    with pytest.raises(ValueError, match="distinct source columns"):
+        ast.load(df, agent="task", task="task")
+
+
+def test_load_allows_distinct_column_mapping_swap():
+    df = pd.DataFrame({"agent": ["task-id"], "task": ["agent-id"], "run": [0], "success": [1]})
+    loaded = ast.load(df, agent="task", task="agent")
+    assert loaded.agent.tolist() == ["agent-id"]
+    assert loaded.task.tolist() == ["task-id"]
