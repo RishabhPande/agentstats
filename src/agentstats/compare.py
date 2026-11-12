@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import math
 import warnings
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, fields
 from itertools import combinations
 from typing import Sequence
 
@@ -296,7 +296,7 @@ def pairwise(df: pd.DataFrame, agents: Sequence[str] | None = None, *, adjacent_
     pairs = list(zip(agents[:-1], agents[1:])) if adjacent_only else list(combinations(agents, 2))
     res = [compare(df, a, b, alpha=alpha, seed=None if seed is None else seed + i, **kw).to_dict()
            for i, (a, b) in enumerate(pairs)]
-    out = pd.DataFrame(res)
+    out = pd.DataFrame(res, columns=[field.name for field in fields(Comparison)])
     out["p_holm"] = holm(out["p_value"])
     out["significant"] = out["p_holm"] < alpha
     return out
