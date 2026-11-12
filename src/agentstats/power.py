@@ -90,7 +90,9 @@ def min_detectable_gap(n_tasks: int, k: int, flakiness: float = 0.05, *, alpha: 
 
 
 def min_runs_for_exact_run_test(alpha: float) -> int:
-    """Smallest balanced k for which a two-sided exact run-permutation test can reach p < alpha."""
+    """Smallest balanced k for which a two-sided exact run-permutation test can reach p <= alpha."""
+    if not math.isfinite(alpha) or not 0 < alpha < 1:
+        raise ValueError("alpha must be finite and strictly between 0 and 1")
     k = 2
     while 2 / math.comb(2 * k, k) > alpha:
         k += 1
