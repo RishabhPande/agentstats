@@ -62,28 +62,32 @@ def report(df: pd.DataFrame, *, alpha: float = 0.05, factors: Sequence[str] | No
     if k_min >= 3:
         de = design_effect(df)
         out += ["## Is noise correlated within runs? (design effect)", "", _fmt(de), ""]
-        if np.nanmedian(de["deff"]) > PROTOCOL["max_deff_for_task_tests"]:
+        if len(sc) >= 2 and np.nanmedian(de["deff"]) > PROTOCOL["max_deff_for_task_tests"]:
             level = "run"
             out += [f"Median design effect > {PROTOCOL['max_deff_for_task_tests']}: using **run-level** tests.", ""]
     inference = "benchmark" if k_min >= 2 else "population"
     if inference == "population":
         out += ["> Only one run per agent: run noise cannot be separated from task noise. "
-                "Tests below are task-population tests. Collect >= 5 runs.", ""]
-    adj = pairwise(df, list(sc.agent), adjacent_only=True, alpha=alpha, n_perm=n_perm, seed=seed,
-                   inference=inference, level=level)
-    adj_show = adj[["a", "b", "gap", "lo", "hi", "p_value", "p_holm", "significant", "test"]]
-    n_sig = int(adj["significant"].sum())
-    out += [f"## Adjacent leaderboard gaps ({n_sig}/{len(adj)} significant after Holm)", "",
-            _fmt(adj_show, pct=("gap", "lo", "hi")), ""]
-    tr = tiers(df, alpha=alpha, n_perm=n_perm, seed=seed, inference=inference, level=level)
-    out += [f"## Statistical tiers ({tr.tier.nunique()} tiers for {len(tr)} agents)", "", _fmt(tr), ""]
-    if k_min >= 2:
-        fs = flip_statistics(df, seed=seed)
-        out += ["## Single-run leaderboard stability", "",
-                f"- Expected Kendall tau between two single-run leaderboards: {fs['kendall_tau_mean']:.3f} "
-                f"(5th pct {fs['kendall_tau_q05']:.3f})",
-                f"- P(the #1 agent changes on a re-run): {fs['p_top1_changes']:.2f}",
-                f"- Fraction of agent pairs whose order flips: {fs['pair_flip_rate']:.3f}", ""]
+                "Any pairwise tests below target the task population. Collect >= 5 runs.", ""]
+    if len(sc) < 2:
+        out += ["## Agent comparisons", "",
+                "Only one agent: no pairwise gaps, statistical tiers, or leaderboard stability comparisons.", ""]
+    else:
+        adj = pairwise(df, list(sc.agent), adjacent_only=True, alpha=alpha, n_perm=n_perm, seed=seed,
+                       inference=inference, level=level)
+        adj_show = adj[["a", "b", "gap", "lo", "hi", "p_value", "p_holm", "significant", "test"]]
+        n_sig = int(adj["significant"].sum())
+        out += [f"## Adjacent leaderboard gaps ({n_sig}/{len(adj)} significant after Holm)", "",
+                _fmt(adj_show, pct=("gap", "lo", "hi")), ""]
+        tr = tiers(df, alpha=alpha, n_perm=n_perm, seed=seed, inference=inference, level=level)
+        out += [f"## Statistical tiers ({tr.tier.nunique()} tiers for {len(tr)} agents)", "", _fmt(tr), ""]
+        if k_min >= 2:
+            fs = flip_statistics(df, seed=seed)
+            out += ["## Single-run leaderboard stability", "",
+                    f"- Expected Kendall tau between two single-run leaderboards: {fs['kendall_tau_mean']:.3f} "
+                    f"(5th pct {fs['kendall_tau_q05']:.3f})",
+                    f"- P(the #1 agent changes on a re-run): {fs['p_top1_changes']:.2f}",
+                    f"- Fraction of agent pairs whose order flips: {fs['pair_flip_rate']:.3f}", ""]
     if factors and k_min >= 3:
         try:
             dec = decompose(df, factors)

@@ -246,3 +246,36 @@ def test_load_allows_distinct_column_mapping_swap():
     loaded = ast.load(df, agent="task", task="agent")
     assert loaded.agent.tolist() == ["agent-id"]
     assert loaded.task.tolist() == ["task-id"]
+
+
+@pytest.mark.parametrize("adjacent_only", [False, True])
+@pytest.mark.parametrize("agents", [None, ["A01"], []])
+def test_pairwise_single_agent_preserves_empty_schema(adjacent_only, agents):
+    df = simulate(SimConfig(n_tasks=20, true_scores=(0.6,), seed=41), 3)
+    out = ast.pairwise(df, agents, adjacent_only=adjacent_only, n_perm=30)
+    assert out.empty
+    assert list(out.columns) == [
+        "a", "b", "gap", "se", "lo", "hi", "p_value", "n_tasks", "n_runs_a",
+        "n_runs_b", "inference", "level", "test", "p_holm", "significant",
+    ]
+    assert out.significant.dtype == bool
+
+
+@pytest.mark.parametrize("runs", [1, 3, 6])
+def test_single_agent_report_and_cli(runs, tmp_path, capsys):
+    from agentstats.cli import main
+    df = simulate(SimConfig(n_tasks=30, true_scores=(0.6,), seed=42), runs)
+    md = ast.report(df, n_perm=30)
+    assert "Scores (pp)" in md
+    assert "Only one agent: no pairwise gaps" in md
+    assert "significant after Holm" not in md
+    assert "## Statistical tiers" not in md
+    assert "## Single-run leaderboard stability" not in md
+    path = tmp_path / "single.csv"
+    df.to_csv(path, index=False)
+    assert main(["report", str(path)]) == 0
+    assert "Only one agent: no pairwise gaps" in capsys.readouterr().out
+    tiers = ast.tiers(df, n_perm=30)
+    assert tiers.agent.tolist() == ["A01"]
+    assert tiers.tier.tolist() == [1]
+    assert tiers.tied_with.tolist() == [""]
