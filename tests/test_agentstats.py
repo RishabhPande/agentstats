@@ -279,3 +279,18 @@ def test_single_agent_report_and_cli(runs, tmp_path, capsys):
     assert tiers.agent.tolist() == ["A01"]
     assert tiers.tier.tolist() == [1]
     assert tiers.tied_with.tolist() == [""]
+
+
+@pytest.mark.parametrize("alpha", [0.0, -0.05, 1.0, 1.1, np.nan, np.inf, -np.inf])
+def test_exact_run_floor_rejects_invalid_alpha(alpha):
+    # Negative alpha previously never terminated; zero returned a spurious floor via underflow.
+    with pytest.raises(ValueError, match="alpha must be finite and strictly between 0 and 1"):
+        ast.min_runs_for_exact_run_test(alpha)
+
+
+def test_exact_run_floor_matches_reachable_p_value():
+    # Preserve the inclusive threshold, including its exact boundary.
+    for alpha in (0.1, 0.05, 0.01, 1e-6):
+        k = ast.min_runs_for_exact_run_test(alpha)
+        assert 2 / math.comb(2 * k, k) <= alpha
+        assert k == 2 or 2 / math.comb(2 * (k - 1), k - 1) > alpha
