@@ -23,6 +23,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, asdict
 from itertools import combinations
+from numbers import Real, Integral
 from typing import Sequence
 
 import numpy as np
@@ -58,9 +59,26 @@ def _z(alpha, power):
 def k_min_from_components(w: float, delta: float, *, sigma2_delta: float = 0.0, n_tasks: int | None = None,
                           alpha: float = 0.05, power: float = 0.8, inference: str = "benchmark",
                           k_floor: int = 3) -> float:
-    """Closed-form minimum runs given variance components."""
+    """Closed-form minimum runs given validated variance components and options."""
+    if inference not in ("benchmark", "population"):
+        raise ValueError("inference must be 'benchmark' or 'population'")
+    for name, value in (("w", w), ("delta", delta), ("sigma2_delta", sigma2_delta),
+                        ("alpha", alpha), ("power", power)):
+        if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real) or not math.isfinite(value):
+            raise ValueError(f"{name} must be a finite real number")
+    if w < 0 or sigma2_delta < 0:
+        raise ValueError("w and sigma2_delta must be nonnegative")
     if delta <= 0:
         raise ValueError("delta must be > 0")
+    if not 0 < alpha < 1:
+        raise ValueError("alpha must be strictly between 0 and 1")
+    if not 0 < power < 1:
+        raise ValueError("power must be strictly between 0 and 1")
+    if isinstance(k_floor, (bool, np.bool_)) or not isinstance(k_floor, Integral) or k_floor < 1:
+        raise ValueError("k_floor must be a positive integer")
+    if n_tasks is not None and (isinstance(n_tasks, (bool, np.bool_)) or
+                                not isinstance(n_tasks, Integral) or n_tasks < 1):
+        raise ValueError("n_tasks must be a positive integer")
     z2 = _z(alpha, power) ** 2
     denom = delta ** 2
     if inference == "population":
