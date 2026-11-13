@@ -78,6 +78,12 @@ agentstats swebench-audit experiments --pass1 --top 20
 6. **Log conditions**: snapshot ids, provider fingerprints, image digests, latency, and per-task outcomes.
 7. **State the estimand**: this benchmark (`inference="benchmark"`) or the task population (`"population"`).
 
+`k_min_from_components()` rejects unknown inference modes, non-finite inputs,
+negative variance components, nonpositive gaps, alpha/power outside (0, 1), and
+nonpositive or non-integer run floors/task counts. Booleans are not numeric
+planner options. Population inference requires a task count. Valid inputs use
+the same formula; an unattainable population gap still returns infinity.
+
 ## Which test?
 
 | Situation | Use |
