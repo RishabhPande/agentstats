@@ -26,6 +26,7 @@ Three tests, chosen by ``level`` / ``inference``:
 from __future__ import annotations
 
 import math
+from numbers import Integral, Real
 import warnings
 from dataclasses import dataclass, asdict, fields
 from itertools import combinations
@@ -243,6 +244,15 @@ def compare(df: pd.DataFrame, a: str, b: str, *, inference: str = "benchmark", l
     _check_inference(inference)
     if level not in ("task", "run"):
         raise ValueError("level must be 'task' or 'run'")
+    if run_test not in ("welch", "permutation"):
+        raise ValueError("run_test must be 'welch' or 'permutation'")
+    if (isinstance(alpha, (bool, np.bool_)) or not isinstance(alpha, Real)
+            or not math.isfinite(alpha) or not 0 < alpha < 1):
+        raise ValueError("alpha must be a finite real number strictly between 0 and 1")
+    if isinstance(n_perm, (bool, np.bool_)) or not isinstance(n_perm, Integral) or n_perm < 1:
+        raise ValueError("n_perm must be a positive integer")
+    if not isinstance(studentize, (bool, np.bool_)):
+        raise ValueError("studentize must be a boolean")
     rng = np.random.default_rng(seed)
     z = stats.norm.ppf(1 - alpha / 2)
     ts = task_stats(df, agents=[a, b])

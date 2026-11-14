@@ -54,6 +54,8 @@ ast.plan(pilot_df, delta=0.02)           # minimum runs per agent to detect a 2 
 print(ast.report(df))                    # all of the above, as markdown
 ```
 
+`compare()` validates its options before selecting a test: `alpha` must be a finite real number strictly between 0 and 1, `n_perm` a positive integer, `studentize` a boolean, and `run_test` either `"welch"` or `"permutation"`. These checks apply even when the chosen test path does not use an option. Misspellings do not select a different test. Valid-input formulas and results are unchanged.
+
 ## CLI
 
 ```bash
