@@ -66,6 +66,8 @@ def main(argv=None) -> int:
         print(ast.audit_leaderboard(scores, args.sd).to_markdown(index=False, floatfmt=".3g"))
     elif args.cmd == "swebench-audit":
         runs, meta = ast.load_swebench_submissions(args.repo, args.split, pass_at_1_only=args.pass1)
+        if meta.empty:
+            ap.error("no eligible SWE-bench submissions remain after loading and filtering")
         top = meta.head(args.top)
         names = list(top.submission)
         df = runs[runs.agent.isin(names)]
