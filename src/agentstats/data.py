@@ -130,7 +130,8 @@ def load_swebench_submissions(repo_dir: str, split: str = "verified", pass_at_1_
     Returns ``(runs, meta)``: a run table with one run per submission
     (``agent`` = submission folder name) and a metadata DataFrame
     (name, date, n_resolved, attempts, agent scaffold, model). Submissions with
-    zero resolved instances are dropped as broken. Requires PyYAML.
+    zero resolved instances are dropped as broken. When no submissions qualify,
+    returns empty run and metadata tables with their normal columns. Requires PyYAML.
     """
     import glob
     import json
@@ -164,4 +165,6 @@ def load_swebench_submissions(repo_dir: str, split: str = "verified", pass_at_1_
                          model=",".join(map(str, tags.get("model") or []))))
         rows += [(d, i, 0, float(i in res)) for i in ids]
     runs = pd.DataFrame(rows, columns=["agent", "task", "run", "success"])
-    return load(runs), pd.DataFrame(meta).sort_values("n_resolved", ascending=False, ignore_index=True)
+    meta = pd.DataFrame(meta, columns=["submission", "date", "name", "n_resolved",
+                                       "attempts", "scaffold", "model"])
+    return load(runs), meta.sort_values("n_resolved", ascending=False, ignore_index=True)
