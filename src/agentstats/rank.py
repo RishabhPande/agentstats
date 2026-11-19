@@ -113,9 +113,15 @@ def flip_statistics(df: pd.DataFrame, n_draws: int = 2000, seed: int | None = 0)
     top_change = np.mean(a.argmax(1) != b.argmax(1))
     A = a.shape[1]
     iu = np.triu_indices(A, 1)
-    sa = np.sign(a[:, :, None] - a[:, None, :])[:, iu[0], iu[1]]
-    sb = np.sign(b[:, :, None] - b[:, None, :])[:, iu[0], iu[1]]
-    flips = np.mean(sa * sb < 0)
+    # Count pairs one draw at a time. Broadcasting over all draws would
+    # materialize multiple (n_draws, A, A) arrays just to keep one triangle.
+    n_flips = 0
+    for x, y in zip(a, b):
+        sa = np.sign(x[iu[0]] - x[iu[1]])
+        sb = np.sign(y[iu[0]] - y[iu[1]])
+        n_flips += np.count_nonzero(sa * sb < 0)
+    n_pairs = a.shape[0] * len(iu[0])
+    flips = n_flips / n_pairs if n_pairs else float("nan")
     return {"kendall_tau_mean": float(np.nanmean(taus)),
             "kendall_tau_q05": float(np.nanquantile(taus, 0.05)),
             "p_top1_changes": float(top_change),
