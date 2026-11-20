@@ -31,14 +31,22 @@ def rank_distribution(df: pd.DataFrame, *, n_boot: int = 5000, inference: str = 
     """Bootstrap rank distribution: mean rank, (1-alpha) rank interval, P(rank 1).
 
     ``level="run"`` uses the observed spread of complete-run scores (robust to
-    run-correlated noise); ``level="task"`` assumes independent task noise.
+    run-correlated noise) and needs at least two runs per agent.
+    ``level="task"`` assumes independent task noise; benchmark inference
+    needs at least two runs in every shared agent/task cell. Population
+    task inference can use one run, but cannot separate run and task noise.
     """
     rng = np.random.default_rng(seed)
     ts = task_stats(df)
     run_sd = None
+    if level != "run" and inference == "benchmark" and np.any(ts.k < 2):
+        raise ValueError("benchmark rank intervals need at least 2 runs per agent/task; "
+                         "collect more runs or use inference='population' for task-population ranks")
     if level == "run":
         sub = df[df.task.isin(ts.tasks)]
         g = sub.groupby(["agent", "run"])["success"].mean().groupby("agent")
+        if (g.size() < 2).any():
+            raise ValueError("run-level rank intervals need at least 2 runs per agent; collect more runs")
         run_sd = (g.std(ddof=1) / np.sqrt(g.size())).reindex(ts.agents).to_numpy()
     S = _resample_scores(ts, n_boot, inference, rng, run_sd)
     R = (-S).argsort(axis=1).argsort(axis=1) + 1  # 1 = best
