@@ -8,6 +8,7 @@ import pandas as pd
 from scipy import stats
 
 from .data import task_stats
+from .estimate import _check_alpha, _check_positive_int
 
 
 def _resample_scores(ts, n_boot, inference, rng, run_sd=None):
@@ -36,6 +37,8 @@ def rank_distribution(df: pd.DataFrame, *, n_boot: int = 5000, inference: str = 
     needs at least two runs in every shared agent/task cell. Population
     task inference can use one run, but cannot separate run and task noise.
     """
+    _check_alpha(alpha)
+    _check_positive_int(n_boot, "n_boot")
     rng = np.random.default_rng(seed)
     ts = task_stats(df)
     run_sd = None
@@ -98,6 +101,7 @@ def single_run_leaderboards(df: pd.DataFrame, n_draws: int = 2000, seed: int | N
     Each draw picks, independently per agent, one observed ``run`` index (a full
     benchmark pass). Returns (n_draws, A) scores, agents in sorted order.
     """
+    _check_positive_int(n_draws, "n_draws")
     rng = np.random.default_rng(seed)
     per = df.groupby(["agent", "run"])["success"].mean()
     agents = sorted(df["agent"].unique())
