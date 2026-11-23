@@ -15,6 +15,8 @@ Two inferential targets are supported, and the distinction matters:
 """
 from __future__ import annotations
 
+import math
+from numbers import Integral, Real
 import warnings
 
 import numpy as np
@@ -29,6 +31,17 @@ INFERENCE = ("benchmark", "population")
 def _check_inference(inference: str) -> None:
     if inference not in INFERENCE:
         raise ValueError(f"inference must be one of {INFERENCE}, got {inference!r}")
+
+
+def _check_alpha(alpha) -> None:
+    if (isinstance(alpha, (bool, np.bool_)) or not isinstance(alpha, Real)
+            or not math.isfinite(alpha) or not 0 < alpha < 1):
+        raise ValueError("alpha must be a finite real number strictly between 0 and 1")
+
+
+def _check_positive_int(value, name: str) -> None:
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral) or value < 1:
+        raise ValueError(f"{name} must be a positive integer")
 
 
 def score_se(mean: np.ndarray, var: np.ndarray, k: np.ndarray, inference: str) -> float:
@@ -49,6 +62,7 @@ def agent_scores(df: pd.DataFrame, inference: str = "benchmark", alpha: float = 
     ``agent, score, se, lo, hi, n_tasks, runs_min, runs_max``.
     """
     _check_inference(inference)
+    _check_alpha(alpha)
     ts = task_stats(df, common_tasks=common_tasks)
     z = stats.norm.ppf(1 - alpha / 2)
     rows = []
