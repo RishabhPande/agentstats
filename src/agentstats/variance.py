@@ -14,12 +14,38 @@ for unbalanced or nested designs fit a mixed model instead (see docs).
 """
 from __future__ import annotations
 
+import math
+from numbers import Real
 from typing import Sequence
 
 import numpy as np
 import pandas as pd
 
 from .data import factor_columns
+from .estimate import _check_alpha, _check_positive_int
+
+
+def _check_scores(s: pd.Series) -> None:
+    if len(s) < 2:
+        raise ValueError("leaderboard audits need at least two entries to compare")
+    if not np.isfinite(s.to_numpy()).all():
+        raise ValueError("scores must be finite real numbers")
+
+
+def _audit_sd(single_run_sd, index) -> pd.Series:
+    """Validated per-agent single-run SD aligned on the leaderboard entries."""
+    if isinstance(single_run_sd, dict):
+        sd = pd.Series(single_run_sd, dtype=float).reindex(index)
+        bad = list(sd.index[~np.isfinite(sd.to_numpy()) | (sd <= 0)])
+        if bad:
+            raise ValueError("single_run_sd must give a positive finite value for every "
+                             f"scored agent; missing or invalid for: {bad}")
+        return sd
+    if (isinstance(single_run_sd, (bool, np.bool_)) or not isinstance(single_run_sd, Real)
+            or not math.isfinite(single_run_sd) or single_run_sd <= 0):
+        raise ValueError("single_run_sd must be a positive finite real number, "
+                         "or a per-agent dict of positive finite values")
+    return pd.Series(float(single_run_sd), index=index)
 
 
 def _one_way(scores: np.ndarray, groups: np.ndarray) -> float:
@@ -91,9 +117,10 @@ def audit_leaderboard(scores: dict[str, float] | pd.Series, single_run_sd: float
     z_{1-alpha/2} * sqrt(sd_a^2 + sd_b^2).
     """
     from scipy import stats
+    _check_alpha(alpha)
     s = pd.Series(scores, dtype=float).sort_values(ascending=False)
-    sd = (pd.Series(single_run_sd) if isinstance(single_run_sd, dict)
-          else pd.Series(single_run_sd, index=s.index)).reindex(s.index)
+    _check_scores(s)
+    sd = _audit_sd(single_run_sd, s.index)
     z = stats.norm.ppf(1 - alpha / 2)
     rows = []
     names = list(s.index)
@@ -120,9 +147,15 @@ def rerun_stability(scores: dict[str, float] | pd.Series, single_run_sd: float, 
     resulting normal posterior (accounts for the published scores being noisy).
     """
     from scipy.stats import kendalltau
+    if (isinstance(single_run_sd, (bool, np.bool_)) or not isinstance(single_run_sd, Real)
+            or not math.isfinite(single_run_sd) or single_run_sd <= 0):
+        raise ValueError("single_run_sd must be a positive finite real number")
+    _check_positive_int(n_draws, "n_draws")
+    s = pd.Series(scores, dtype=float)
+    _check_scores(s)
     rng = np.random.default_rng(seed)
-    s = pd.Series(scores, dtype=float).to_numpy() / 100
-    sd = single_run_sd / 100
+    s = s.to_numpy() / 100
+    sd = float(single_run_sd) / 100
     if method == "plug-in":
         theta = np.tile(s, (n_draws, 1))
     elif method == "eb":
