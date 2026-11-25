@@ -3,7 +3,7 @@ import math
 import numpy as np
 import pytest
 from scipy import stats
-from agentstats.power import k_min_from_components
+from agentstats.power import k_min_from_components, k_min_generic, min_detectable_gap
 
 @pytest.mark.parametrize('field,value', [
     ('inference', 'populaton'), ('inference', ''),
@@ -36,3 +36,37 @@ def test_valid_formula_and_zero_variance_preserved(inference):
 
 def test_population_unattainable_stays_infinite():
     assert math.isinf(k_min_from_components(.001, .01, sigma2_delta=.5, n_tasks=100, inference='population'))
+
+
+@pytest.mark.parametrize('n_tasks', [0, -1, True, 1.5, float('nan')])
+def test_generic_requires_positive_integer_tasks(n_tasks):
+    with pytest.raises(ValueError, match='n_tasks'):
+        k_min_generic(n_tasks, .05)
+
+
+@pytest.mark.parametrize('flakiness', [-0.1, float('nan'), float('inf'), True])
+def test_generic_requires_valid_flakiness(flakiness):
+    with pytest.raises(ValueError, match='flakiness'):
+        k_min_generic(500, .05, flakiness)
+
+
+@pytest.mark.parametrize('field,value', [
+    ('n_tasks', 0), ('n_tasks', True), ('n_tasks', 1.5),
+    ('k', 0), ('k', -2), ('k', True), ('k', 2.5),
+    ('flakiness', -0.1), ('flakiness', float('nan')), ('flakiness', float('inf')),
+    ('alpha', 0), ('alpha', 1), ('alpha', float('nan')),
+    ('power', 0), ('power', 1), ('power', float('inf')),
+])
+def test_min_detectable_gap_rejects_invalid_inputs(field, value):
+    options = dict(n_tasks=500, k=5, flakiness=.07)
+    options[field] = value
+    with pytest.raises(ValueError, match=field):
+        min_detectable_gap(**options)
+
+
+def test_valid_generic_and_gap_answers_preserved():
+    z = stats.norm.ppf(1-.05/2) + stats.norm.ppf(.8)
+    assert k_min_generic(500, .05, .07) == float(max(3, math.ceil(z**2 * 2*.07/500 / .05**2)))
+    assert k_min_generic(np.int64(500), np.float64(.05), np.float64(.07)) == k_min_generic(500, .05, .07)
+    assert min_detectable_gap(500, 5, .07) == float(z * math.sqrt(2*.07/2500))
+    assert min_detectable_gap(np.int64(500), np.int64(5), .07) == min_detectable_gap(500, 5, .07)

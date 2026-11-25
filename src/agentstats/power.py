@@ -97,6 +97,13 @@ def k_min_generic(n_tasks: int, delta: float, flakiness: float = 0.05, *, alpha:
     Published repeated-run studies on SWE-bench Verified imply single-run SDs of
     roughly 1-2 pp on 500 tasks, i.e. flakiness ~0.05-0.15 (phi = T * sd^2).
     """
+    if isinstance(n_tasks, (bool, np.bool_)) or not isinstance(n_tasks, Integral) or n_tasks < 1:
+        raise ValueError("n_tasks must be a positive integer")
+    if isinstance(flakiness, (bool, np.bool_)) or not isinstance(flakiness, Real) \
+            or not math.isfinite(flakiness):
+        raise ValueError("flakiness must be a finite real number")
+    if flakiness < 0:
+        raise ValueError("flakiness must be nonnegative")
     w = 2 * flakiness / n_tasks
     return k_min_from_components(w, delta, alpha=alpha, power=power, k_floor=k_floor)
 
@@ -104,6 +111,18 @@ def k_min_generic(n_tasks: int, delta: float, flakiness: float = 0.05, *, alpha:
 def min_detectable_gap(n_tasks: int, k: int, flakiness: float = 0.05, *, alpha: float = 0.05,
                        power: float = 0.8) -> float:
     """Smallest true gap detectable with k runs (benchmark inference)."""
+    for name, value in (("n_tasks", n_tasks), ("k", k)):
+        if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral) or value < 1:
+            raise ValueError(f"{name} must be a positive integer")
+    if isinstance(flakiness, (bool, np.bool_)) or not isinstance(flakiness, Real) \
+            or not math.isfinite(flakiness):
+        raise ValueError("flakiness must be a finite real number")
+    if flakiness < 0:
+        raise ValueError("flakiness must be nonnegative")
+    for name, value in (("alpha", alpha), ("power", power)):
+        if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real) \
+                or not math.isfinite(value) or not 0 < value < 1:
+            raise ValueError(f"{name} must be strictly between 0 and 1")
     return float(_z(alpha, power) * math.sqrt(2 * flakiness / (n_tasks * k)))
 
 
